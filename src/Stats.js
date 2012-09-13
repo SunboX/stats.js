@@ -8,12 +8,14 @@ var Stats = function () {
 	var ms = 0, msMin = Infinity, msMax = 0;
 	var fps = 0, fpsMin = Infinity, fpsMax = 0;
 	var frames = 0, mode = 0;
+	var heapSizeSupport = !(!window.performance && !window.performance.memory);
 
 	var container = document.createElement( 'div' );
 	container.id = 'stats';
-	container.addEventListener( 'mousedown', function ( event ) { event.preventDefault(); setMode( ++ mode % 2 ) }, false );
+	container.addEventListener( 'mousedown', function ( event ) { event.preventDefault(); setMode( ++ mode % ( heapSizeSupport ? 3 : 2 ) ) }, false );
 	container.style.cssText = 'width:80px;opacity:0.9;cursor:pointer';
 
+	// -- FPS --
 	var fpsDiv = document.createElement( 'div' );
 	fpsDiv.id = 'fps';
 	fpsDiv.style.cssText = 'padding:0 0 3px 3px;text-align:left;background-color:#002';
@@ -38,28 +40,56 @@ var Stats = function () {
 
 	}
 
+	// -- MS --
 	var msDiv = document.createElement( 'div' );
 	msDiv.id = 'ms';
 	msDiv.style.cssText = 'padding:0 0 3px 3px;text-align:left;background-color:#020;display:none';
 	container.appendChild( msDiv );
-
+	
 	var msText = document.createElement( 'div' );
 	msText.id = 'msText';
 	msText.style.cssText = 'color:#0f0;font-family:Helvetica,Arial,sans-serif;font-size:9px;font-weight:bold;line-height:15px';
 	msText.innerHTML = 'MS';
 	msDiv.appendChild( msText );
-
+	
 	var msGraph = document.createElement( 'div' );
 	msGraph.id = 'msGraph';
 	msGraph.style.cssText = 'position:relative;width:74px;height:30px;background-color:#0f0';
 	msDiv.appendChild( msGraph );
-
+	
 	while ( msGraph.children.length < 74 ) {
-
+	
 		var bar = document.createElement( 'span' );
 		bar.style.cssText = 'width:1px;height:30px;float:left;background-color:#131';
 		msGraph.appendChild( bar );
+	
+	}
 
+	// -- JS Heap Size
+	if ( heapSizeSupport ) {
+		var heapSizeDiv = document.createElement( 'div' );
+		heapSizeDiv.id = 'heapSize';
+		heapSizeDiv.style.cssText = 'padding:0 0 3px 3px;text-align:left;background-color:#200;display:none';
+		container.appendChild( heapSizeDiv );
+		
+		var heapSizeText = document.createElement( 'div' );
+		heapSizeText.id = 'heapSizeText';
+		heapSizeText.style.cssText = 'color:#f00;font-family:Helvetica,Arial,sans-serif;font-size:9px;font-weight:bold;line-height:15px';
+		heapSizeText.innerHTML = 'MB';
+		heapSizeDiv.appendChild( heapSizeText );
+		
+		var heapSizeGraph = document.createElement( 'div' );
+		heapSizeGraph.id = 'msGraph';
+		heapSizeGraph.style.cssText = 'position:relative;width:74px;height:30px;background-color:#f00';
+		heapSizeDiv.appendChild( heapSizeGraph );
+		
+		while ( heapSizeGraph.children.length < 74 ) {
+		
+			var bar = document.createElement( 'span' );
+			bar.style.cssText = 'width:1px;height:30px;float:left;background-color:#311';
+			heapSizeGraph.appendChild( bar );
+		
+		}
 	}
 
 	var setMode = function ( value ) {
@@ -71,11 +101,20 @@ var Stats = function () {
 			case 0:
 				fpsDiv.style.display = 'block';
 				msDiv.style.display = 'none';
+				heapSizeDiv.style.display = 'none';
 				break;
 			case 1:
 				fpsDiv.style.display = 'none';
 				msDiv.style.display = 'block';
+				heapSizeDiv.style.display = 'none';
 				break;
+			case 2:
+				if ( heapSizeSupport ) {
+					fpsDiv.style.display = 'none';
+					msDiv.style.display = 'none';
+					heapSizeDiv.style.display = 'block';
+					break;
+				}
 		}
 
 	}
@@ -89,7 +128,7 @@ var Stats = function () {
 
 	return {
 
-		REVISION: 11,
+		REVISION: 12,
 
 		domElement: container,
 
@@ -125,6 +164,14 @@ var Stats = function () {
 
 				prevTime = time;
 				frames = 0;
+
+				if ( heapSizeSupport ) {
+					var used = window.performance.memory.usedJSHeapSize;
+					var total = window.performance.memory.totalJSHeapSize;
+					
+					heapSizeText.textContent = used + ' MB';
+					updateGraph( heapSizeGraph, Math.min( 30, 30 - ( used / total ) * 30 ) );
+				}
 
 			}
 
